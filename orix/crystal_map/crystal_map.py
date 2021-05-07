@@ -632,6 +632,40 @@ class CrystalMap:
         """Return a deep copy using :func:`copy.deepcopy` function."""
         return copy.deepcopy(self)
 
+    @classmethod
+    def empty(cls, shape=None, step_sizes=None):
+        """Create a crystal map of a given shape and step sizes with
+        identity rotations.
+
+        Parameters
+        ----------
+        shape : tuple of int, optional
+            Map shape. Default is a 2D map of shape (5, 10), i.e. with
+            five rows and ten columns.
+        step_sizes : tuple, optional
+            Map step sizes. If None (default), it is set to 1 px in each
+            map direction given by `shape`.
+
+        Returns
+        -------
+        CrystalMap
+
+
+        Examples
+        --------
+        >>> from orix.crystal_map import CrystalMap
+        >>> xmap = CrystalMap.empty((5, 10))
+        >>> xmap
+        Phase  Orientations  Name  Space group  Point group  Proper point group     Color
+            0   50 (100.0%)  None         None         None                None  tab:blue
+        Properties:
+        Scan unit: px
+        >>> xmap.plot("x")  # Increasing towards the right
+        """
+        d, n = create_coordinate_arrays(shape, step_sizes)
+        d["rotations"] = Rotation.identity((n,))
+        return cls(**d)
+
     def get_map_data(self, item, decimals=3, fill_value=None):
         """Return an array of a class instance attribute, with values
         equal to ``False`` in ``self.is_in_data`` set to `fill_value`, of
@@ -894,3 +928,50 @@ class CrystalMap:
         for dim_slice in self._data_slices_from_coordinates():
             data_shape.append(dim_slice.stop - dim_slice.start)
         return tuple(data_shape)
+
+
+def create_coordinate_arrays(shape=None, step_sizes=None):
+    """Create flattened coordinate arrays from a given map shape and
+    step sizes, suitable for initializing a
+    :class:`orix.crystal_map.CrystalMap`. Arrays for 1D, 2D, or 3D maps
+    can be returned.
+
+    Parameters
+    ----------
+    shape : tuple of int, optional
+        Map shape. Default is a 2D map of shape (5, 10) with five rows
+        and ten columns. Can be up to 3D.
+    step_sizes : tuple, optional
+        Map step sizes. If None (default), it is set to 1 px in each
+        map direction given by `shape`.
+
+    Returns
+    -------
+    d : dict of numpy.ndarray
+        Dictionary with keys "z", "y", and "x", depending on the length
+        of `shape`, with coordinate arrays.
+    map_size : int
+        Number of map points.
+    """
+    if shape is None:
+        shape = (5, 10)
+    ndim = len(shape)
+    if step_sizes is None:
+        step_sizes = (1,) * ndim
+
+    # Set up as if a 3D map is to be returned
+    dz, dy, dx = (1,) * (3 - ndim) + step_sizes
+    nz, ny, nx = (1,) * (3 - ndim) + shape
+    d = dict()
+
+    # Add coordinate arrays depending on the number of map dimensions
+    d["x"] = np.tile(np.arange(nx) * dx, ny * nz).flatten()
+    map_size = nx
+    if ndim > 1:
+        d["y"] = np.tile(np.sort(np.tile(np.arange(ny) * dy, nx)), nz).flatten()
+        map_size *= ny
+    if ndim > 2:
+        d["z"] = np.array([np.ones(ny * nx) * i * dz for i in range(nz)]).flatten()
+        map_size *= nz
+
+    return d, map_size

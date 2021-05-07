@@ -88,7 +88,7 @@ class TestOrixHDF5Plugin:
                     dictionary={"a": [np.array(24.5)], "c": set()}, group=group
                 )
 
-    def test_crystalmap2dict(self, temp_file_path, crystal_map_input):
+    def test_crystalmap2dict(self, crystal_map_input):
         cm = CrystalMap(**crystal_map_input)
         cm_dict = crystalmap2dict(cm)
 
@@ -269,3 +269,11 @@ class TestOrixHDF5Plugin:
         assert np.allclose(xmap2.prop[prop3d_name], xmap.prop[prop3d_name])
         assert np.allclose(xmap2.prop[prop2d_name].reshape(prop2d_shape), prop2d)
         assert np.allclose(xmap2.prop[prop3d_name].reshape(prop3d_shape), prop3d)
+
+    def test_write_read_2d(self, temp_file_path, crystal_map_input):
+        crystal_map_input["z"] = None
+        xmap = CrystalMap(**crystal_map_input)
+        assert xmap._coordinates["z"] == None
+        save(filename=temp_file_path, object2write=xmap)
+        xmap2 = load(temp_file_path)
+        assert xmap2._coordinates["z"] == None

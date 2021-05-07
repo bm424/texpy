@@ -25,11 +25,8 @@ from orix.io.plugins.ang import (
     _get_header,
     _get_phases_from_header,
     _get_vendor_columns,
-    _get_header_from_phases,
     _get_nrows_ncols_step_sizes,
     _get_column_width,
-    _get_prop_arrays,
-    _get_prop_array,
 )
 from orix.tests.conftest import (
     ANGFILE_TSL_HEADER,
@@ -86,7 +83,7 @@ def test_loadang(angfile_astar, expected_data):
 
 class TestAngReader:
     @pytest.mark.parametrize(
-        "angfile_tsl, map_shape, step_sizes, phase_id, n_unknown_columns, example_rot",
+        "angfile_tsl, map_shape, step_sizes, phase_id, example_rot",
         [
             (
                 # Read by angfile_tsl() via request.param (passed via `indirect` below)
@@ -102,7 +99,6 @@ class TestAngReader:
                 (5, 3),
                 (0.1, 0.1),
                 np.zeros(5 * 3, dtype=int),
-                5,
                 np.array(
                     [[1.59942, 2.37748, -1.74690], [1.59331, 2.37417, -1.74899]]
                 ),  # rotations as rows of Euler angle triplets
@@ -120,7 +116,6 @@ class TestAngReader:
                 (8, 4),
                 (1.5, 1.5),
                 np.zeros(8 * 4, dtype=int),
-                5,
                 np.array(
                     [[-0.12113, 2.34188, 1.31702], [-0.47211, 0.79936, -1.80973]]
                 ),  # rotations as rows of Euler angle triplets
@@ -129,13 +124,7 @@ class TestAngReader:
         indirect=["angfile_tsl"],
     )
     def test_load_ang_tsl(
-        self,
-        angfile_tsl,
-        map_shape,
-        step_sizes,
-        phase_id,
-        n_unknown_columns,
-        example_rot,
+        self, angfile_tsl, map_shape, step_sizes, phase_id, example_rot,
     ):
         xmap = load(angfile_tsl)
 

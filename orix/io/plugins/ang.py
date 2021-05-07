@@ -22,7 +22,7 @@ import warnings
 from diffpy.structure import Lattice, Structure
 import numpy as np
 
-from orix.crystal_map import CrystalMap, PhaseList
+from orix.crystal_map import CrystalMap, PhaseList, create_coordinate_arrays
 from orix.quaternion.rotation import Rotation
 from orix.quaternion.symmetry import point_group_aliases
 from orix import __version__
@@ -443,9 +443,10 @@ def file_writer(
     )
     eulers[~indexed_points] = 4 * np.pi
 
-    # Spatial arrays
-    x = np.tile(np.arange(ncols) * dx, nrows)
-    y = np.sort(np.tile(np.arange(nrows) * dy, ncols))
+    # Coordinate arrays
+    d, _ = create_coordinate_arrays((nrows, ncols), (dy, dx))
+    x = d["x"]
+    y = d["y"]
     x_width = _get_column_width(np.max(x))
     y_width = _get_column_width(np.max(y))
 

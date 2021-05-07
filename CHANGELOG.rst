@@ -12,6 +12,8 @@ Unreleased
 
 Added
 -----
+- CrystalMap.empty() class method to create empty map of a given shape with identity
+  rotations.
 - CrystalMap.plot() method for easy plotting of phases, properties etc.
 - Python 3.9 support.
 - Miller class, inherinting functionality from the Vector3d class, to handle operations

@@ -16,21 +16,22 @@
 # You should have received a copy of the GNU General Public License
 # along with orix.  If not, see <http://www.gnu.org/licenses/>.
 
-"""
-Crystallographic map of rotations, crystal phases and key properties associated with
-every spatial coordinate in a 1D, 2D or 3D space.
+"""Crystallographic map of rotations, crystal phases and key properties
+associated with every spatial coordinate in a 1D, 2D or 3D space.
 
-All map properties with a value in each data point are stored as 1D arrays.
+All map properties with a value in each data point are stored as 1D
+arrays.
 """
 
-from orix.crystal_map.crystal_map import CrystalMap
+from orix.crystal_map.crystal_map import CrystalMap, create_coordinate_arrays
 from orix.crystal_map.crystal_map_properties import CrystalMapProperties
 from orix.crystal_map.phase_list import Phase, PhaseList
 
 # Lists what will be imported when calling "from orix.crystal_map import *"
 __all__ = [
+    "create_coordinate_arrays",
     "CrystalMap",
+    "CrystalMapProperties",
     "Phase",
     "PhaseList",
-    "CrystalMapProperties",
 ]

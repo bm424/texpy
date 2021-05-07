@@ -25,7 +25,7 @@ from h5py import File
 import numpy as np
 import pytest
 
-from orix.crystal_map import CrystalMap
+from orix.crystal_map import CrystalMap, create_coordinate_arrays
 from orix.crystal_map.phase_list import PhaseList
 from orix.quaternion.rotation import Rotation
 
@@ -195,9 +195,9 @@ def angfile_tsl(tmpdir, request):
     (ny, nx), (dy, dx), phase_id, n_unknown_columns, example_rotations = request.param
 
     # File columns
-    map_size = ny * nx
-    x = np.tile(np.arange(nx) * dx, ny)
-    y = np.sort(np.tile(np.arange(ny) * dy, nx))
+    d, map_size = create_coordinate_arrays((ny, nx), (dy, dx))
+    x = d["x"]
+    y = d["y"]
     ci = np.random.random(map_size)  # [0, 1]
     iq = np.random.uniform(low=1e3, high=1e6, size=map_size)
     un = np.zeros(map_size, dtype=int)
@@ -267,9 +267,9 @@ def angfile_astar(tmpdir, request):
     (ny, nx), (dy, dx), phase_id, example_rotations = request.param
 
     # File columns
-    map_size = ny * nx
-    x = np.tile(np.arange(nx) * dx, ny)
-    y = np.sort(np.tile(np.arange(ny) * dy, nx))
+    d, map_size = create_coordinate_arrays((ny, nx), (dy, dx))
+    x = d["x"]
+    y = d["y"]
     ind = np.random.uniform(low=0, high=100, size=map_size)
     rel = np.round(np.random.random(map_size), decimals=2)  # [0, 1]
     relx100 = (rel * 100).astype(int)
@@ -331,9 +331,9 @@ def angfile_emsoft(tmpdir, request):
     (ny, nx), (dy, dx), phase_id, example_rotations = request.param
 
     # File columns
-    map_size = ny * nx
-    x = np.tile(np.arange(nx) * dx, ny)
-    y = np.sort(np.tile(np.arange(ny) * dy, nx))
+    d, map_size = create_coordinate_arrays((ny, nx), (dy, dx))
+    x = d["x"]
+    y = d["y"]
     iq = np.round(np.random.uniform(low=0, high=100, size=map_size), decimals=1)
     dp = np.round(np.random.random(map_size), decimals=3)  # [0, 1]
 
@@ -389,7 +389,9 @@ def temp_emsoft_h5ebsd_file(tmpdir, request):
     # Unpack parameters
     map_shape, (dy, dx), example_rotations, n_top_matches, refined = request.param
     ny, nx = map_shape
-    map_size = ny * nx
+    d, map_size = create_coordinate_arrays(map_shape, (dy, dx))
+    x = d["x"]
+    y = d["y"]
 
     # Create groups used in reader
     ebsd_group = f.create_group("Scan 1/EBSD")
@@ -406,12 +408,12 @@ def temp_emsoft_h5ebsd_file(tmpdir, request):
         header_group.create_dataset(name, data=np.array([data], dtype=dtype))
 
     # Create `data_group` datasets, mostly quality metrics
-    data_group.create_dataset("X Position", data=np.tile(np.arange(nx) * dx, ny))
+    data_group.create_dataset("X Position", data=x)
     # Note that "Y Position" is wrongly written to their h5ebsd file by EMsoft
     data_group.create_dataset(
         "Y Position",
         data=np.tile(np.arange(nx) * dx, ny),  # Wrong
-        #        data=np.sort(np.tile(np.arange(ny) * dy, nx)),  # Correct
+        # data=y,  # Correct
     )
     for name, shape, dtype in [
         ("AvDotProductMap", map_shape, np.int32),
@@ -521,16 +523,7 @@ def phase_list(request):
 def crystal_map_input(request, rotations):
     # Unpack parameters
     (nz, ny, nx), (dz, dy, dx), rotations_per_point, unique_phase_ids = request.param
-    map_size = nz * ny * nx
-
-    d = {"x": None, "y": None, "z": None, "rotations": None}
-    if nx > 1:
-        d["x"] = np.tile(np.arange(nx) * dx, ny * nz)
-    if ny > 1:
-        d["y"] = np.tile(np.sort(np.tile(np.arange(ny) * dy, nx)), nz)
-    if nz > 1:
-        d["z"] = np.array([np.ones(ny * nx) * i * dz for i in range(nz)]).flatten()
-
+    d, map_size = create_coordinate_arrays((nz, ny, nx), (dz, dy, dx))
     rot_idx = np.random.choice(
         np.arange(rotations.size), map_size * rotations_per_point
     )
@@ -538,9 +531,7 @@ def crystal_map_input(request, rotations):
     if rotations_per_point > 1:
         data_shape += (rotations_per_point,)
     d["rotations"] = rotations[rot_idx].reshape(*data_shape)
-
     d["phase_id"] = np.random.choice(unique_phase_ids, map_size)
-
     return d
 
 

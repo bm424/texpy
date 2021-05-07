@@ -62,7 +62,7 @@ class TestCrystalMapInit:
     @pytest.mark.parametrize(
         (
             "crystal_map_input, expected_shape, expected_size, expected_step_sizes, "
-            "expected_rotations_per_point"
+            "expected_rotations_per_point, expected_coords_nan"
         ),
         [
             (
@@ -71,6 +71,7 @@ class TestCrystalMapInit:
                 25,
                 {"z": 0, "y": 1.5, "x": 1.5},
                 3,
+                (True, False, False),
             ),
             (
                 ((1, 1, 10), (0, 0.1, 0.1), 1, [0]),
@@ -78,6 +79,7 @@ class TestCrystalMapInit:
                 10,
                 {"z": 0, "y": 0, "x": 0.1},
                 1,
+                (True, True, False),
             ),
             (
                 ((1, 10, 1), (0, 1e-3, 0), 2, [0]),
@@ -85,6 +87,7 @@ class TestCrystalMapInit:
                 10,
                 {"z": 0, "y": 1e-3, "x": 0},
                 2,
+                (True, False, True),
             ),
         ],
         indirect=["crystal_map_input"],
@@ -96,6 +99,7 @@ class TestCrystalMapInit:
         expected_size,
         expected_step_sizes,
         expected_rotations_per_point,
+        expected_coords_nan,
     ):
         xmap = CrystalMap(**crystal_map_input)
         coordinate_arrays = [
@@ -109,12 +113,11 @@ class TestCrystalMapInit:
         assert xmap._step_sizes == expected_step_sizes
         assert xmap.rotations_per_point == expected_rotations_per_point
 
-        for actual_coords, expected_coords, expected_step_size in zip(
-            xmap._coordinates.values(), coordinate_arrays, expected_step_sizes.values()
+        for actual_coords, expected_coords, expected_nan in zip(
+            xmap._coordinates.values(), coordinate_arrays, expected_coords_nan,
         ):
-            print(actual_coords, expected_coords)
-            if expected_coords is None:
-                assert actual_coords is None
+            if actual_coords is None:
+                assert expected_nan
             else:
                 assert np.allclose(actual_coords, expected_coords)
 
@@ -198,6 +201,63 @@ class TestCrystalMapInit:
         xmap = CrystalMap(phase_list=phase_list, **crystal_map_input)
 
         assert xmap.phases.names == desired_phase_names
+
+    @pytest.mark.parametrize(
+        "shape, step_sizes, desired_coordinates, desired_step_sizes",
+        [
+            (
+                (5, 5),
+                None,
+                dict(
+                    z=None,
+                    y=np.tile(np.sort(np.tile(np.arange(5) * 1, 5)), 1).flatten(),
+                    x=np.tile(np.arange(5) * 1, 5 * 1).flatten(),
+                ),
+                dict(z=0, y=1, x=1),
+            ),
+            (
+                (2, 2, 3),
+                (2, 3, 4),
+                dict(
+                    z=np.array([np.ones(2 * 3) * i * 2 for i in range(2)]).flatten(),
+                    y=np.tile(np.sort(np.tile(np.arange(2) * 3, 3)), 2).flatten(),
+                    x=np.tile(np.arange(3) * 4, 2 * 2).flatten(),
+                ),
+                dict(z=2, y=3, x=4),
+            ),
+            (
+                None,  # Default (5, 10)
+                None,  # Default (1, 1)
+                dict(
+                    z=None,
+                    y=np.tile(np.sort(np.tile(np.arange(5) * 1, 10)), 1).flatten(),
+                    x=np.tile(np.arange(10) * 1, 5 * 1).flatten(),
+                ),
+                dict(z=0, y=1, x=1),
+            ),
+        ],
+    )
+    def test_classmethod_empty(
+        self, shape, step_sizes, desired_coordinates, desired_step_sizes
+    ):
+        xmap = CrystalMap.empty(shape=shape, step_sizes=step_sizes)
+        assert xmap.scan_unit == "px"
+        if shape is None:
+            shape = (5, 10)  # Default
+        desired_size = np.prod(shape)
+        assert np.allclose(
+            xmap.rotations.data,
+            np.array([1, 0, 0, 0] * desired_size).reshape((desired_size, 4)),
+        )
+        assert xmap.shape == shape
+        for i in ["z", "y", "x"]:
+            assert xmap._step_sizes[i] == desired_step_sizes[i]
+            coords = xmap._coordinates[i]
+            desired_coords = desired_coordinates[i]
+            if coords is None:
+                assert coords == desired_coords
+            else:
+                assert np.allclose(coords, desired_coords)
 
 
 class TestCrystalMapGetItem:
